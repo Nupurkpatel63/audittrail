@@ -1,0 +1,182 @@
+rules:
+
+  # ============================================================
+  # ACCESS CONTROL
+  # ============================================================
+
+  - id: R001
+    name: After-Hours Access
+    category: Access Control
+    description: >
+      Detect access to sensitive or business resources outside
+      approved business hours.
+
+    type: condition
+
+    conditions:
+      - field: action
+        operator: in
+        values:
+          - DATA_ACCESS
+          - DATA_EXPORT
+          - REPORT_VIEW
+
+      - field: timestamp
+        operator: after_hours
+        parameters:
+          start: "06:00"
+          end: "21:59"
+
+    severity: HIGH
+
+
+  - id: R002
+    name: Unauthorized Role or Resource Access
+    category: Access Control
+    description: >
+      Detect users accessing resources that are not permitted
+      for their assigned role.
+
+    type: condition
+
+    conditions:
+      - field: role
+        operator: role_not_allowed
+        compare_with: resource
+
+    parameters:
+      allowed_resources:
+        ADMIN:
+          - CUSTOMER_DATA
+          - FINANCIAL_DATA
+          - EMPLOYEE_DATA
+          - AUDIT_LOG
+          - SYSTEM_CONFIG
+          - REPORTING
+          - TRANSACTION
+          - SENSITIVE_DATA
+
+        MANAGER:
+          - CUSTOMER_DATA
+          - FINANCIAL_DATA
+          - REPORTING
+          - TRANSACTION
+
+        ANALYST:
+          - REPORTING
+          - CUSTOMER_DATA
+
+        SUPPORT:
+          - CUSTOMER_DATA
+          - REPORTING
+
+        AUDITOR:
+          - AUDIT_LOG
+          - REPORTING
+          - FINANCIAL_DATA
+
+        USER:
+          - CUSTOMER_DATA
+
+    severity: CRITICAL
+
+
+  # ============================================================
+  # FINANCIAL CONTROLS
+  # ============================================================
+
+  - id: R003
+    name: Transaction Approval Limit Exceeded
+    category: Financial Controls
+    description: >
+      Detect transactions approved above the maximum approval
+      limit assigned to the user.
+
+    type: comparison
+
+    conditions:
+      - field: action
+        operator: equals
+        value: TRANSACTION_APPROVE
+
+    field: transaction_amount
+    operator: greater_than
+    compare_with: approval_limit
+
+    severity: CRITICAL
+
+
+  - id: R004
+    name: Segregation of Duties Violation
+    category: Financial Controls
+    description: >
+      Detect cases where the same user creates and approves
+      a financial transaction.
+
+    type: condition
+
+    conditions:
+      - field: action
+        operator: equals
+        value: TRANSACTION_APPROVE
+
+      - field: sod_conflict
+        operator: equals
+        value: true
+
+    severity: CRITICAL
+
+
+  # ============================================================
+  # DATA GOVERNANCE
+  # ============================================================
+
+  - id: R005
+    name: Sensitive Data Without Justification
+    category: Data Governance
+    description: >
+      Detect access or export of sensitive data when no valid
+      business justification has been provided.
+
+    type: condition
+
+    conditions:
+      - field: data_type
+        operator: equals
+        value: SENSITIVE
+
+      - field: action
+        operator: in
+        values:
+          - DATA_ACCESS
+          - DATA_EXPORT
+
+      - field: justification
+        operator: empty
+
+    severity: HIGH
+
+
+  - id: R006
+    name: Excessive Data Access
+    category: Data Governance
+    description: >
+      Detect users accessing excessive amounts of sensitive
+      data within a 24-hour period.
+
+    type: comparison
+
+    conditions:
+      - field: data_type
+        operator: equals
+        value: SENSITIVE
+
+      - field: action
+        operator: equals
+        value: DATA_ACCESS
+
+    field: data_access_count_24h
+    operator: greater_than
+    value: 100
+
+    severity: HIGH

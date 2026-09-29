@@ -1,0 +1,16 @@
+application:
+  name: Compliance Auditor
+  environment: development
+  version: 1.0.0
+
+input:
+  file: data/sample_logs_1000.csv
+
+output:
+  excel: reports/compliance_report.xlsx
+  html: reports/compliance_report.html
+  audit_chain: reports/audit_chain.json
+
+logging:
+  level: INFO
+  file: compliance_auditor.log
